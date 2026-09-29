@@ -285,8 +285,17 @@
   // the old cached app.js in memory. Combined with the version number in the
   // header, reopening the app after a push always lands on the new build.
   if ('serviceWorker' in navigator) {
+    // Only reload on a LATER controllerchange, not the very first one — a
+    // page's first-ever visit also fires this event once the fresh service
+    // worker claims it, which isn't an update and would otherwise cause an
+    // unwanted extra reload on first install. navigator.serviceWorker.controller
+    // being already set here means this page was already under an older
+    // worker's control, so a controllerchange from here on really is a
+    // newer version taking over.
+    let armed = !!navigator.serviceWorker.controller;
     let reloadedForUpdate = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!armed) { armed = true; return; }
       if (reloadedForUpdate) return;
       reloadedForUpdate = true;
       window.location.reload();

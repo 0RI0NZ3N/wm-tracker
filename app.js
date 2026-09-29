@@ -5,7 +5,7 @@
 // Bump this together with CACHE in sw.js on every deploy. Shown in the header
 // so it's visible at a glance whether a tablet has picked up the latest push,
 // without having to dig into browser dev tools.
-const APP_VERSION = 'v16';
+const APP_VERSION = 'v17';
 
 const DB_NAME = 'warehouse-tracker';
 const DB_VERSION = 1;
