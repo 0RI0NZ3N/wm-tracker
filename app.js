@@ -2,6 +2,11 @@
 // Local-first PWA. Data lives only in this device's browser storage.
 // ---------------------------------------------------------------------------
 
+// Bump this together with CACHE in sw.js on every deploy. Shown in the header
+// so it's visible at a glance whether a tablet has picked up the latest push,
+// without having to dig into browser dev tools.
+const APP_VERSION = 'v16';
+
 const DB_NAME = 'warehouse-tracker';
 const DB_VERSION = 1;
 const STORE = 'items';
@@ -669,6 +674,8 @@ document.getElementById('exportModalShareBtn').addEventListener('click', async (
 // --- init ------------------------------------------------------------------
 
 (async function init() {
+  const verEl = document.getElementById('appVersion');
+  if (verEl) verEl.textContent = APP_VERSION;
   db = await openDb();
   renderQueue();
   refreshAutocomplete();
