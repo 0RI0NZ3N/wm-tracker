@@ -596,28 +596,66 @@ document.getElementById('exportPdfBtn').addEventListener('click', async () => {
   printHtmlDoc(body, `export-${new Date().toISOString().slice(0, 10)}`, style);
 });
 
+// --- JSON export -----------------------------------------------------------
+// Getting a file off an Android browser turns out to be unreliable in ways
+// that are invisible to us: <a download> on a blob: URL silently no-ops on
+// Samsung Internet, and Web Share API "Level 2" (sharing actual files, not
+// just text) is inconsistently supported — canShare() can say yes and the
+// share still not go anywhere, or say no even though the browser is fine
+// with a plain-text share. Rather than keep guessing which trick this
+// particular browser/version wants, Export always opens a modal with the
+// raw JSON so something is visibly on screen every time, with two ways to
+// actually get it off the device: Share (tries a file share, then a text
+// share) and Copy (clipboard, so it can be pasted into Notes/Drive/etc. and
+// saved as a .json by hand — this always works, whatever the browser).
+let exportJsonText = '';
 document.getElementById('exportBtn').addEventListener('click', async () => {
   const items = await dbGetAll();
-  const filename = `export-${new Date().toISOString().slice(0, 10)}.json`;
-  const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
-
-  // Samsung Internet (and some other Android browsers) silently ignores the
-  // <a download> trick for blob: URLs — nothing happens, no error either.
-  // The share sheet is the reliable way to get a file out of the page on
-  // those browsers: "Save to my files" in the sheet does what the download
-  // button was supposed to do. Try that first, fall back to the classic
-  // download link, which still works fine in Chrome and on desktop.
-  const file = new File([blob], filename, { type: 'application/json' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: filename });
-      return;
-    } catch (e) {
-      if (e && e.name === 'AbortError') return; // person cancelled the share sheet
-      // fall through to the other methods below
+  exportJsonText = JSON.stringify(items, null, 2);
+  document.getElementById('exportModalText').value = exportJsonText;
+  document.getElementById('exportModal').classList.add('active');
+  const ta = document.getElementById('exportModalText');
+  ta.focus();
+  ta.select();
+});
+document.getElementById('exportModalCloseBtn').addEventListener('click', () => {
+  document.getElementById('exportModal').classList.remove('active');
+});
+document.getElementById('exportModal').addEventListener('click', (e) => {
+  if (e.target.id === 'exportModal') document.getElementById('exportModal').classList.remove('active');
+});
+document.getElementById('exportModalCopyBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('exportModalCopyBtn');
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(exportJsonText);
+    } else {
+      const ta = document.getElementById('exportModalText');
+      ta.focus(); ta.select();
+      document.execCommand('copy');
     }
+    const was = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = was; }, 1500);
+  } catch (e) {
+    const ta = document.getElementById('exportModalText');
+    ta.focus(); ta.select();
+    alert('Could not copy automatically — the text is selected, use your keyboard/menu copy instead.');
   }
+});
+document.getElementById('exportModalShareBtn').addEventListener('click', async () => {
+  const filename = `export-${new Date().toISOString().slice(0, 10)}.json`;
+  const blob = new Blob([exportJsonText], { type: 'application/json' });
+  const file = new File([blob], filename, { type: 'application/json' });
 
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: filename }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  if (navigator.share) {
+    try { await navigator.share({ title: filename, text: exportJsonText }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
