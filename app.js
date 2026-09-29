@@ -598,11 +598,30 @@ document.getElementById('exportPdfBtn').addEventListener('click', async () => {
 
 document.getElementById('exportBtn').addEventListener('click', async () => {
   const items = await dbGetAll();
+  const filename = `export-${new Date().toISOString().slice(0, 10)}.json`;
   const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
+
+  // Samsung Internet (and some other Android browsers) silently ignores the
+  // <a download> trick for blob: URLs — nothing happens, no error either.
+  // The share sheet is the reliable way to get a file out of the page on
+  // those browsers: "Save to my files" in the sheet does what the download
+  // button was supposed to do. Try that first, fall back to the classic
+  // download link, which still works fine in Chrome and on desktop.
+  const file = new File([blob], filename, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: filename });
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // person cancelled the share sheet
+      // fall through to the other methods below
+    }
+  }
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `export-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
