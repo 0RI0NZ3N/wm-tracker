@@ -1,4 +1,4 @@
-const CACHE = 'app-cache-v13';
+const CACHE = 'app-cache-v14';
 const ASSETS = ['./', './index.html', './app.js', './manifest.json'];
 
 self.addEventListener('install', (e) => {
