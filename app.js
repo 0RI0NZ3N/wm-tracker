@@ -5,7 +5,7 @@
 // Bump this together with CACHE in sw.js on every deploy. Shown in the header
 // so it's visible at a glance whether a tablet has picked up the latest push,
 // without having to dig into browser dev tools.
-const APP_VERSION = 'v17';
+const APP_VERSION = 'v18';
 
 const DB_NAME = 'warehouse-tracker';
 const DB_VERSION = 1;
@@ -524,9 +524,13 @@ document.getElementById('exportPdfBtn').addEventListener('click', async () => {
   </colgroup>`;
   const tableHead = `<tr><th>Description</th><th class="num">Qty</th><th class="num">Boxes</th><th>Bin</th><th>By</th><th>Captured</th><th>Status</th></tr>`;
   const fmtDate = (iso) => {
+    // Fixed to en-US / MM/DD/YYYY on purpose - toLocaleDateString(undefined, ...)
+    // used to follow the device's locale, which on some tablets prints DD/MM
+    // order and silently swaps the day and month when this list is re-imported
+    // elsewhere. Pinning the locale keeps the printed format unambiguous.
     const d = new Date(iso);
-    const datePart = d.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit', year: 'numeric' });
-    const timePart = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+    const datePart = d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    const timePart = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
     return `${datePart} ${timePart}`;
   };
   const rowHtml = (item) => `
